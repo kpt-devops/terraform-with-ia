@@ -1,0 +1,46 @@
+name: terraform-pr
+on:
+  pull_request:
+    paths: ["envs/**", "modules/**", "scripts/**", ".github/workflows/terraform-pr.yml"]
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+jobs:
+  # Corre en todos los PRs, incluidos los de forks: no usa secretos.
+  checks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - uses: terraform-linters/setup-tflint@v4
+      - run: pip install checkov
+      - run: ./scripts/tf-check.sh < /dev/null
+
+  # Solo PRs del propio repo: los forks no reciben secretos ni pueden asumir el rol OIDC.
+  plan:
+    needs: checks
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_PLAN_ROLE_ARN }}   # rol de solo lectura vía OIDC
+          aws-region: us-east-1
+      - working-directory: envs/dev
+        run: |
+          terraform init -input=false
+          terraform plan -input=false -no-color -out=tfplan
+          terraform show -json tfplan > plan.json
+      - uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+      - run: |
+          infracost breakdown --path envs/dev/plan.json --format json --out-file /tmp/infracost.json
+          infracost comment github --path /tmp/infracost.json --repo $GITHUB_REPOSITORY \
+            --pull-request ${{ github.event.pull_request.number }} \
+            --github-token ${{ github.token }} --behavior update

@@ -1,0 +1,9 @@
+# Activa la demo de FinOps agéntico (cost-explainer)
+enable_cost_explainer = true
+telegram_chat_id      = "123456789"
+
+# Si ya tienes un monitor de CAD por servicio, reutilízalo (solo se permite uno por cuenta):
+# cost_anomaly_monitor_arn = "arn:aws:ce::111122223333:anomalymonitor/xxxxxxxx"
+
+# Deja vacío para el modo determinista (sin LLM)
+# bedrock_model_id = ""
