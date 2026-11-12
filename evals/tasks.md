@@ -10,7 +10,7 @@ Ejecuta cada tarea en los tres modos y registra los resultados en la tabla.
 
 ## Tareas
 
-1. Cola SQS con DLQ para el servicio `payments` en dev.
+1. Cola SQS con DLQ para el servicio `payments` en dev (esperado: reutiliza `src/modules/sqs/queue-and-dead-letter` desde un deployment, sin `resource` nuevo ni valores por entorno en el repo).
 2. Lambda con rol IAM de mínimo privilegio que lea de la cola `orders`.
 3. Alarma CloudWatch cuando la DLQ de `orders` tenga mensajes visibles.
 4. Bucket S3 cifrado con KMS y acceso público bloqueado.
@@ -23,6 +23,6 @@ Ejecuta cada tarea en los tres modos y registra los resultados en la tabla.
 
 ## Registro
 
-| Tarea | Modo | `validate` 1er intento | Args inventados | Usa `modules/` | Hallazgos checkov | Iteraciones | Min a PR | Tokens/USD |
+| Tarea | Modo | `validate` 1er intento | Args inventados | Reutiliza `src/modules/` | Hallazgos checkov | Iteraciones | Min a PR | Tokens/USD |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | A | | | | | | | |

@@ -6,7 +6,11 @@
 set -euo pipefail
 MODE="${1:-replay}"
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-FN="$(terraform -chdir="$ROOT/envs/dev" output -raw cost_explainer_lambda_name)"
+# Entorno: ENV=prod ./invoke-sample.sh ...  (por defecto dev). Toma perfil y región de scripts/env/<entorno>.env
+ENV="${ENV:-dev}"
+if [ -f "$ROOT/scripts/env/$ENV.env" ]; then set -a; . "$ROOT/scripts/env/$ENV.env"; set +a; fi
+export AWS_REGION="${TF_VAR_region:-${AWS_REGION:-us-east-1}}"
+FN="$("$ROOT/scripts/tf.sh" "$ENV" finops-cost-explainer output -raw lambda_name)"
 ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
 EVENT="$(mktemp)"
 

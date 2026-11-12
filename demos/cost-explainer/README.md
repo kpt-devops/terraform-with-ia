@@ -14,15 +14,20 @@ CAD (alerta IMMEDIATE) → SNS → Lambda cost-explainer → Bedrock (opcional) 
 El código junta la evidencia; el modelo solo la explica y debe citar ids de evidencia.
 Si Bedrock no está disponible, la Lambda envía un resumen determinista.
 
-La infraestructura vive en este repositorio como el módulo
-[`modules/cost-explainer`](../../modules/cost-explainer), con las mismas convenciones y validaciones
-(`tf-check.sh`, checkov) que el resto del repo. Esta carpeta contiene la guía y los scripts de la demo.
+La infraestructura es el deployment [`src/deployments/finops-cost-explainer`](../../src/deployments/finops-cost-explainer),
+un root module con su propio state que solo invoca módulos reutilizables de `src/modules/`.
+El código de la Lambda vive aparte, en `src/apps/`.
 
 | Ruta | Para qué |
 | --- | --- |
-| `modules/cost-explainer/` | SNS, suscripción de CAD, Lambda, rol IAM de solo lectura |
-| `modules/cost-explainer/lambda/handler.py` | Recolecta evidencia, explica y envía a Telegram |
-| `envs/dev/` | Activa el módulo con `enable_cost_explainer = true` |
+| `src/deployments/finops-cost-explainer/main.tf` | Composición: CAD → SNS → Lambda → Telegram, más el IAM de solo lectura |
+| `src/deployments/finops-cost-explainer/config.example.json` | Claves de config por entorno (se suben a SSM, no al repo) |
+| `src/modules/sns/topic/` | Topic que solo CAD puede publicar, suscrito a la Lambda |
+| `src/modules/lambda/function/` | Lambda con X-Ray, retención de logs y concurrencia limitada |
+| `src/modules/cost-explorer/anomaly-monitor/` | Monitor de CAD (se omite si ya tienes uno) |
+| `src/modules/cost-explorer/anomaly-subscription/` | Suscripción inmediata de CAD por umbral |
+| `src/apps/cost-explainer/handler.py` | Recolecta evidencia, explica y envía a Telegram |
+| `scripts/tf.sh` | Elige workspace, cuenta y región por entorno |
 | `demos/cost-explainer/scripts/invoke-sample.sh` | Dispara la demo sin esperar una anomalía real |
 
 ## Requisitos
@@ -32,7 +37,7 @@ La infraestructura vive en este repositorio como el módulo
 | AWS CLI con credenciales de la cuenta | Desplegar en `us-east-1` |
 | Terraform ≥ 1.6 | |
 | Cost Anomaly Detection activo | Con al menos un monitor |
-| Tag de costos activado en Billing | Por defecto `Project` (variable `cost_tag_key`) |
+| Tag de costos activado en Billing | Por defecto `Project` (`COST_TAG_KEY` en el deployment) |
 | Bot de Telegram | Se crea en el paso 1 |
 | Acceso a un modelo en Bedrock | Opcional |
 | Permisos de Amazon Q Developer en la consola | Para la parte de Amazon Q |
@@ -64,27 +69,40 @@ El token nunca queda en el state de Terraform ni en el repositorio.
 
 En la consola de Bedrock (us-east-1) → **Model access**, habilita el modelo que usarás.
 El valor por defecto es un perfil de inferencia de Claude Haiku; verifica el ID exacto en
-**Bedrock → Inference profiles** y cámbialo en `bedrock_model_id` si hace falta.
-Con `bedrock_model_id = ""` la demo funciona en modo determinista.
+**Bedrock → Inference profiles** y cámbialo en la clave `bedrock_model_id` de la config si hace falta.
+Con `"bedrock_model_id": ""` la demo funciona en modo determinista.
 
 ### 4. Desplegar
 
+Desde la raíz del repo. Los valores de tu cuenta se quedan en tu máquina y en SSM, nunca en el repo.
+
+1. Configura el entorno (perfil, región y cuenta):
+
 ```bash
-cd envs/dev
-cp terraform.tfvars.example terraform.tfvars   # enable_cost_explainer = true y telegram_chat_id
+cp scripts/env/example.env scripts/env/dev.env    # edita AWS_PROFILE, TF_VAR_region, TF_VAR_account_id
+```
+
+2. Crea la config del deployment y súbela a SSM (`/terraform-with-ia/dev/finops-cost-explainer`):
+
+```bash
+cp src/deployments/finops-cost-explainer/config.example.json src/deployments/finops-cost-explainer/config.dev.json
+# edita telegram_chat_id; los archivos config.<entorno>.json están en .gitignore
+./scripts/config-push.sh dev finops-cost-explainer
 ```
 
 CAD permite **un solo monitor por servicio** por cuenta. Si ya tienes uno, reutilízalo:
 
 ```bash
 aws ce get-anomaly-monitors --query 'AnomalyMonitors[].[MonitorName,MonitorArn,MonitorDimension]' --output table
-# copia el ARN en cost_anomaly_monitor_arn dentro de terraform.tfvars
+# copia el ARN en existing_monitor_arn de config.dev.json y vuelve a correr config-push.sh
 ```
 
+3. Valida y despliega. CAD es por cuenta: despliega este deployment en un solo entorno por cuenta AWS.
+
 ```bash
-../../scripts/tf-check.sh < /dev/null   # mismas validaciones que el hook del agente
-terraform init
-terraform apply
+./scripts/tf-check.sh < /dev/null                       # mismas validaciones que el hook del agente
+./scripts/tf.sh dev finops-cost-explainer plan
+./scripts/tf.sh dev finops-cost-explainer apply         # lo ejecutas tú; el agente no puede
 ```
 
 ### 5. Probar
@@ -185,13 +203,13 @@ automática (AWS FinOps Agent, en preview) solo entrega en Slack o Jira.
 ## Limpieza
 
 ```bash
-cd envs/dev
-terraform destroy -target=module.cost_explainer   # o enable_cost_explainer = false + terraform apply
+./scripts/tf.sh dev finops-cost-explainer destroy
+aws ssm delete-parameter --region us-east-1 --name /terraform-with-ia/dev/finops-cost-explainer
 aws ssm delete-parameter --region us-east-1 --name /cost-explainer/telegram-bot-token
 ```
 
 ## Límites conocidos
 
 - CloudTrail `LookupEvents` solo cubre la cuenta y región de la Lambda; para otras cuentas usa Amazon Q.
-- El mapeo servicio → EventSource cubre los servicios más comunes (`EVENT_SOURCES` en `modules/cost-explainer/lambda/handler.py`).
+- El mapeo servicio → EventSource cubre los servicios más comunes (`EVENT_SOURCES` en `src/apps/cost-explainer/handler.py`).
 - CAD necesita historial de gasto para detectar anomalías; no se puede forzar una anomalía real de forma fiable, por eso existen los modos de prueba.

@@ -1,0 +1,4 @@
+{
+  "create_oidc_provider": true,
+  "state_bucket": ""
+}
