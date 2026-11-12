@@ -8,6 +8,7 @@ module "function" {
   # checkov:skip=CKV_AWS_116: los reintentos los define el origen del evento; agregar DLQ cuando la función lo requiera.
   # checkov:skip=CKV_AWS_158: los logs no contienen secretos; cifrado por defecto de CloudWatch Logs.
   # checkov:skip=CKV_AWS_338: la retención se define por función con log_retention_days.
+  # checkov:skip=CKV_AWS_50: X-Ray sí está activo (tracing_mode = "Active"); checkov no evalúa el bloque dynamic del módulo.
   source  = "terraform-aws-modules/lambda/aws"
   version = "~> 8.12"
 
@@ -29,6 +30,9 @@ module "function" {
   attach_tracing_policy = true
 
   cloudwatch_logs_retention_in_days = var.log_retention_days
+
+  # Sin Function URL (default del módulo); si alguien la activa, nunca pública.
+  authorization_type = "AWS_IAM"
 
   allowed_triggers                        = var.allowed_triggers
   create_current_version_allowed_triggers = false # sin versiones publicadas

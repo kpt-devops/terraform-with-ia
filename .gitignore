@@ -7,6 +7,7 @@ plan.json
 .terraform.lock.hcl
 crash.log
 .build/
+.external_modules/
 builds/
 **/__pycache__/
 
