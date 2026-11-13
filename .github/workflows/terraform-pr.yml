@@ -18,9 +18,9 @@ jobs:
       deployments: ${{ steps.list.outputs.deployments }}
       environment: ${{ steps.env.outputs.environment }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
-      - uses: terraform-linters/setup-tflint@v4
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+      - uses: terraform-linters/setup-tflint@v6
       - run: pip install checkov
       - run: ./scripts/tf-check.sh < /dev/null
       - id: list
@@ -49,11 +49,11 @@ jobs:
       # Opcional: sin el secreto se omite el comentario de costo de Infracost.
       INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_wrapper: false
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_PLAN_ROLE_ARN }}   # rol de solo lectura vía OIDC
           aws-region: ${{ vars.AWS_REGION }}
@@ -61,7 +61,7 @@ jobs:
           ./scripts/tf.sh ${{ matrix.environment }} ${{ matrix.deployment }} plan -input=false -no-color -out=tfplan
           ./scripts/tf.sh ${{ matrix.environment }} ${{ matrix.deployment }} show -json tfplan > plan.json
       - if: env.INFRACOST_API_KEY != ''
-        uses: infracost/actions/setup@v3
+        uses: infracost/actions/setup@v5
         with:
           api-key: ${{ env.INFRACOST_API_KEY }}
       - if: env.INFRACOST_API_KEY != ''
