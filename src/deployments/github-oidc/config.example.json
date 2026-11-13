@@ -1,4 +1,5 @@
 {
   "create_oidc_provider": true,
-  "state_bucket": "mi-bucket-state"
+  "state_bucket": "mi-bucket-state",
+  "oidc_sub_prefix": "repo:mi-owner@000000/mi-repo@000000"
 }

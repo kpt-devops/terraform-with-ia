@@ -11,6 +11,11 @@ locals {
   create_oidc_provider = try(local.cfg.create_oidc_provider, true)
   oidc_provider_arn    = local.create_oidc_provider ? module.oidc_provider[0].arn : data.aws_iam_openid_connect_provider.existing[0].arn
   state_bucket         = try(local.cfg.state_bucket, "")
+
+  # Prefijo del claim sub del token OIDC. Con "immutable subject" activo en el repo, GitHub emite
+  # repo:<owner>@<owner_id>/<repo>@<repo_id> en vez de repo:<owner>/<repo>. Ver:
+  # gh api repos/<owner>/<repo>/actions/oidc/customization/sub (campo sub_claim_prefix).
+  oidc_sub_prefix = try(local.cfg.oidc_sub_prefix, "repo:${local.repository}")
 }
 
 module "env" {
@@ -85,7 +90,7 @@ module "plan_role" {
   name                = "gha-terraform-plan-${local.environment}"
   description         = "terraform plan desde GitHub Actions (${local.repository}, environment ${local.environment})"
   oidc_provider_arn   = local.oidc_provider_arn
-  subjects            = ["repo:${local.repository}:environment:${local.environment}"]
+  subjects            = ["${local.oidc_sub_prefix}:environment:${local.environment}"]
   managed_policy_arns = ["arn:aws:iam::aws:policy/ReadOnlyAccess"]
   inline_policy_json  = data.aws_iam_policy_document.plan.json
   tags                = module.tagger.tags
