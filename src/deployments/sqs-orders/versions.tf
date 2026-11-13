@@ -7,11 +7,10 @@ terraform {
     }
   }
 
-  # Estado remoto recomendado; con workspaces cada entorno queda en env:/<env>/<key>.
-  # backend "s3" {
-  #   bucket       = "<bucket-de-state>"
-  #   key          = "deployments/sqs-orders/terraform.tfstate"
-  #   region       = "us-east-1"
-  #   use_lockfile = true
-  # }
+  # Estado remoto: un bucket por cuenta. bucket y region los pasa scripts/tf.sh desde
+  # TF_STATE_BUCKET / TF_STATE_REGION del .env del entorno. Workspace = env:/<entorno>/<key>.
+  backend "s3" {
+    key          = "deployments/sqs-orders/terraform.tfstate"
+    use_lockfile = true
+  }
 }

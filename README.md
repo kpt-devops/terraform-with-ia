@@ -24,9 +24,11 @@ scripts/
 | Ruta | Para qué |
 | --- | --- |
 | `AGENTS.md` | Reglas para cualquier agente de código |
-| `.mcp.json` | Terraform MCP Server (toolset `registry`, versión fijada) |
+| `.mcp.json` | Terraform MCP Server (escribir con la fuente vigente) y AWS MCP Server (revisar lo desplegado, solo lectura) |
 | `.claude/settings.json` | `apply`/`destroy`/`state`/`import` denegados + hook de validación |
 | `.claude/skills/tf-builder/` | Flujo intención → PR |
+| `src/deployments/agent-readonly/` | Rol del agente para el AWS MCP Server: ve configuración, no datos ni secretos ([pasos](#revisar-la-infraestructura-con-el-aws-mcp-server)) |
+| `demos/terraform-mcp/` | Guía y guion de la demo de IaC con IA (nivel 200) |
 | `src/deployments/sqs-orders/` | Ejemplo mínimo: una cola con DLQ |
 | `src/deployments/github-oidc/` | Bootstrap del CI: proveedor OIDC y rol de solo lectura para el `plan` ([pasos](#ci-con-oidc)) |
 | `src/deployments/finops-cost-explainer/` | Demo de FinOps agéntico ([guía](demos/cost-explainer/README.md)) |
@@ -89,7 +91,39 @@ cp src/deployments/sqs-orders/config.example.json src/deployments/sqs-orders/con
 | `utils/environment` | `environment = terraform.workspace`; falla si el workspace no es `dev` o `prod`; lee la config del deployment desde SSM |
 | `module.env.config` | Valores por entorno (umbrales, reintentos, flags), leídos con `try(..., default)` |
 | `allowed_account_ids` | Impide aplicar un entorno en una cuenta AWS que no le corresponde |
-| Backend S3 | Un state por deployment; con workspaces, cada entorno queda en `env:/<entorno>/...` |
+| Backend S3 | Un bucket por cuenta (`TF_STATE_BUCKET` en el `.env`; en CI, variable del GitHub Environment) y un state por deployment; con workspaces, cada entorno queda en `env:/<entorno>/...` |
+
+## Revisar la infraestructura con el AWS MCP Server
+
+El [AWS MCP Server](https://aws.amazon.com/blogs/aws/the-aws-mcp-server-is-now-generally-available) (gestionado
+por AWS) le permite al agente comprobar que lo desplegado coincide con el código. Corre con un rol propio,
+creado con Terraform, que lee configuración pero no datos, secretos ni permite escribir:
+
+```bash
+cp src/deployments/agent-readonly/config.example.json src/deployments/agent-readonly/config.dev.json
+./scripts/config-push.sh dev agent-readonly
+./scripts/tf.sh dev agent-readonly apply
+./scripts/tf.sh dev agent-readonly output -raw agent_role_arn
+```
+
+```ini
+# ~/.aws/config
+[profile terraform-with-ia-agent]
+role_arn       = <agent_role_arn>
+source_profile = <tu perfil>
+region         = us-east-1
+```
+
+| Capa | Control |
+| --- | --- |
+| IAM | `ReadOnlyAccess` + deny explícito de `s3:GetObject*`, `secretsmanager:GetSecretValue`, `ssm:GetParameter*`, `kms:Decrypt`, `sqs:ReceiveMessage`, lecturas de DynamoDB y `lambda:GetFunction` |
+| Proxy | `mcp-proxy-for-aws-cli` fijado por versión con `--read-only` |
+| Claude Code | `mcp__aws__run_script` denegado en `.claude/settings.json` |
+| AGENTS.md | El AWS MCP solo verifica; los cambios van por código y PR |
+| Auditoría | CloudTrail registra cada llamada; métricas en el namespace `AWS-MCP` |
+
+Opcional a nivel de organización: una SCP con `aws:ViaAWSMCPService = true` que niegue escrituras aunque el
+perfil tenga más permisos ([AWS Security Blog](https://aws.amazon.com/blogs/security/understanding-iam-for-managed-aws-mcp-servers)).
 
 ## CI con OIDC
 

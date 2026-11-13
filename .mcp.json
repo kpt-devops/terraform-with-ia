@@ -2,7 +2,25 @@
   "mcpServers": {
     "terraform": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "hashicorp/terraform-mcp-server:1.3.0", "--toolsets=registry"]
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "hashicorp/terraform-mcp-server:1.3.0",
+        "--toolsets=registry"
+      ]
+    },
+    "aws": {
+      "command": "uvx",
+      "args": [
+        "mcp-proxy-for-aws-cli==1.8.0",
+        "https://aws-mcp.us-east-1.api.aws/mcp",
+        "--profile",
+        "terraform-with-ia-agent",
+        "--region",
+        "us-east-1",
+        "--read-only"
+      ]
     }
   }
 }

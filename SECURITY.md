@@ -21,5 +21,6 @@ Si algo de esto llega a un commit, rota la credencial primero y después limpia 
 | Escaneo IaC (checkov) | `scripts/tf-check.sh`, hook del agente y CI |
 | Detección de secretos (gitleaks) | `.pre-commit-config.yaml` |
 | `apply`/`destroy` bloqueados para el agente | `.claude/settings.json` y `scripts/tf.sh` |
+| AWS MCP Server con rol sin escritura ni lectura de datos/secretos | `src/deployments/agent-readonly`, `.mcp.json` |
 | `plan` con rol de solo lectura vía OIDC, sin secretos para forks | `.github/workflows/terraform-pr.yml` |
 | Actualización de providers, módulos y actions | `.github/dependabot.yml` |
