@@ -41,6 +41,12 @@ terraform init -input=false -reconfigure \
   -backend-config="bucket=$TF_STATE_BUCKET" \
   -backend-config="region=${TF_STATE_REGION:-$TF_VAR_region}" \
   ${TF_INIT_ARGS:-} >/dev/null
+# En CI el rol de plan es de solo lectura: no puede crear el state de un workspace nuevo. Si el
+# deployment aún no está desplegado en este entorno, se omite con un aviso (el primer apply es manual).
+if [ -n "${GITHUB_ACTIONS:-}" ] && ! terraform workspace list | sed 's/^[* ]*//' | grep -qx "$ENV"; then
+  echo "::notice title=$PROJECT::no está desplegado en $ENV (no hay workspace); se omite '$CMD'." >&2
+  exit 0
+fi
 terraform workspace select -or-create "$ENV" >/dev/null
 echo "[tf] deployment=$PROJECT entorno=$ENV workspace=$(terraform workspace show) perfil=${AWS_PROFILE:-<default>}" >&2
 exec terraform "$CMD" "$@"

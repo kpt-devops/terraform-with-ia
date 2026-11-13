@@ -1,6 +1,8 @@
 name: terraform-pr
 on:
+  # Promoción por rama base: feature → develop planifica dev; develop → main planifica prod.
   pull_request:
+    branches: [develop, main]
     paths: ["src/**", "scripts/**", ".github/workflows/terraform-pr.yml"]
 permissions:
   id-token: write
@@ -14,14 +16,18 @@ jobs:
       contents: read
     outputs:
       deployments: ${{ steps.list.outputs.deployments }}
+      environment: ${{ steps.env.outputs.environment }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
-      - uses: terraform-linters/setup-tflint@v4
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+      - uses: terraform-linters/setup-tflint@v6
       - run: pip install checkov
       - run: ./scripts/tf-check.sh < /dev/null
       - id: list
         run: echo "deployments=$(ls src/deployments | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+      # Un solo entorno por PR, según la rama base.
+      - id: env
+        run: echo "environment=${{ github.base_ref == 'main' && 'prod' || 'dev' }}" >> "$GITHUB_OUTPUT"
 
   # Solo PRs del propio repo: los forks no reciben secretos ni pueden asumir el rol OIDC.
   plan:
@@ -30,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        environment: [dev, prod]
+        environment: ["${{ needs.checks.outputs.environment }}"]
         deployment: ${{ fromJSON(needs.checks.outputs.deployments) }}
     runs-on: ubuntu-latest
     # Un GitHub Environment por entorno. Variables: AWS_REGION, AWS_ACCOUNT_ID, TF_STATE_BUCKET, TF_STATE_REGION. Secreto: AWS_PLAN_ROLE_ARN.
@@ -40,22 +46,27 @@ jobs:
       TF_VAR_account_id: ${{ vars.AWS_ACCOUNT_ID }}
       TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
       TF_STATE_REGION: ${{ vars.TF_STATE_REGION }}
+      # Opcional: sin el secreto se omite el comentario de costo de Infracost.
+      INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_wrapper: false
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_PLAN_ROLE_ARN }}   # rol de solo lectura vía OIDC
           aws-region: ${{ vars.AWS_REGION }}
       - run: |
           ./scripts/tf.sh ${{ matrix.environment }} ${{ matrix.deployment }} plan -input=false -no-color -out=tfplan
           ./scripts/tf.sh ${{ matrix.environment }} ${{ matrix.deployment }} show -json tfplan > plan.json
-      - uses: infracost/actions/setup@v3
+      - if: env.INFRACOST_API_KEY != ''
+        uses: infracost/actions/setup@v5
         with:
-          api-key: ${{ secrets.INFRACOST_API_KEY }}
-      - run: |
+          api-key: ${{ env.INFRACOST_API_KEY }}
+      - if: env.INFRACOST_API_KEY != ''
+        run: |
+          [ -s plan.json ] || { echo "sin plan (deployment no desplegado); se omite Infracost"; exit 0; }
           infracost breakdown --path plan.json --format json --out-file /tmp/infracost.json
           infracost comment github --path /tmp/infracost.json --repo $GITHUB_REPOSITORY \
             --pull-request ${{ github.event.pull_request.number }} \
