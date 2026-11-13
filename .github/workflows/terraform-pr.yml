@@ -46,6 +46,8 @@ jobs:
       TF_VAR_account_id: ${{ vars.AWS_ACCOUNT_ID }}
       TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
       TF_STATE_REGION: ${{ vars.TF_STATE_REGION }}
+      # Opcional: sin el secreto se omite el comentario de costo de Infracost.
+      INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
@@ -58,10 +60,12 @@ jobs:
       - run: |
           ./scripts/tf.sh ${{ matrix.environment }} ${{ matrix.deployment }} plan -input=false -no-color -out=tfplan
           ./scripts/tf.sh ${{ matrix.environment }} ${{ matrix.deployment }} show -json tfplan > plan.json
-      - uses: infracost/actions/setup@v3
+      - if: env.INFRACOST_API_KEY != ''
+        uses: infracost/actions/setup@v3
         with:
-          api-key: ${{ secrets.INFRACOST_API_KEY }}
-      - run: |
+          api-key: ${{ env.INFRACOST_API_KEY }}
+      - if: env.INFRACOST_API_KEY != ''
+        run: |
           infracost breakdown --path plan.json --format json --out-file /tmp/infracost.json
           infracost comment github --path /tmp/infracost.json --repo $GITHUB_REPOSITORY \
             --pull-request ${{ github.event.pull_request.number }} \
