@@ -66,6 +66,7 @@ jobs:
           api-key: ${{ env.INFRACOST_API_KEY }}
       - if: env.INFRACOST_API_KEY != ''
         run: |
+          [ -s plan.json ] || { echo "sin plan (deployment no desplegado); se omite Infracost"; exit 0; }
           infracost breakdown --path plan.json --format json --out-file /tmp/infracost.json
           infracost comment github --path /tmp/infracost.json --repo $GITHUB_REPOSITORY \
             --pull-request ${{ github.event.pull_request.number }} \
