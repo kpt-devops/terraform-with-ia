@@ -91,7 +91,7 @@ cp src/deployments/sqs-orders/config.example.json src/deployments/sqs-orders/con
 | `utils/environment` | `environment = terraform.workspace`; falla si el workspace no es `dev` o `prod`; lee la config del deployment desde SSM |
 | `module.env.config` | Valores por entorno (umbrales, reintentos, flags), leídos con `try(..., default)` |
 | `allowed_account_ids` | Impide aplicar un entorno en una cuenta AWS que no le corresponde |
-| Backend S3 | Un bucket por cuenta (`TF_STATE_BUCKET` en el `.env`; en CI, variable del GitHub Environment) y un state por deployment; con workspaces, cada entorno queda en `env:/<entorno>/...` |
+| Backend S3 | Un bucket por cuenta (`TF_STATE_BUCKET` en el `.env`; en CI, secreto del GitHub Environment para que no aparezca en los logs) y un state por deployment; con workspaces, cada entorno queda en `env:/<entorno>/...` |
 
 ## Revisar la infraestructura con el AWS MCP Server
 
