@@ -32,9 +32,15 @@ if [ -f "$ENV_FILE" ]; then
 fi
 : "${TF_VAR_region:?define TF_VAR_region en scripts/env/$ENV.env o en el entorno}"
 export TF_VAR_account_id="${TF_VAR_account_id:-}"
+# Un bucket de state por cuenta: dev y prod viven en cuentas distintas.
+: "${TF_STATE_BUCKET:?define TF_STATE_BUCKET en scripts/env/$ENV.env o en el entorno}"
 
 cd "$DIR"
-terraform init -input=false ${TF_INIT_ARGS:-} >/dev/null
+# -reconfigure: al cambiar de entorno cambia el bucket; nunca migra state entre cuentas.
+terraform init -input=false -reconfigure \
+  -backend-config="bucket=$TF_STATE_BUCKET" \
+  -backend-config="region=${TF_STATE_REGION:-$TF_VAR_region}" \
+  ${TF_INIT_ARGS:-} >/dev/null
 terraform workspace select -or-create "$ENV" >/dev/null
 echo "[tf] deployment=$PROJECT entorno=$ENV workspace=$(terraform workspace show) perfil=${AWS_PROFILE:-<default>}" >&2
 exec terraform "$CMD" "$@"

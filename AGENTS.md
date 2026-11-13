@@ -35,6 +35,13 @@ Cuatro carpetas en src/, cada una con un solo trabajo:
 - Usa la versión de provider fijada en el versions.tf del deployment; no la cambies sin pedirlo.
 - Si un argumento pedido no existe en esa versión, dilo y no lo inventes.
 
+## AWS MCP Server (revisar la infraestructura)
+- Úsalo solo para leer y verificar lo desplegado contra el código (existe, cifrado, tags, DLQ, etc.).
+  Nunca para crear, modificar o borrar recursos: los cambios van siempre por código y PR.
+- Corre con el perfil terraform-with-ia-agent (rol agent-readonly-<entorno>): sin escritura y sin
+  lectura de datos ni secretos. Si una llamada falla por permisos, repórtalo; no busques otra vía.
+- Reporta diferencias código ↔ AWS como hallazgos en el PR o en la respuesta; no las corrijas en AWS.
+
 ## Convenciones
 - Naming: <recurso>-<entorno> con el entorno de `module.env.environment`.
 - Tags: siempre `module.tagger.tags` (Project, Environment, Owner, CostCenter).

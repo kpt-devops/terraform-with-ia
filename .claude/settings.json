@@ -8,7 +8,8 @@
       "Bash(./scripts/tf.sh * apply*)",
       "Bash(./scripts/tf.sh * destroy*)",
       "Bash(scripts/tf.sh * apply*)",
-      "Bash(scripts/tf.sh * destroy*)"
+      "Bash(scripts/tf.sh * destroy*)",
+      "mcp__aws__run_script"
     ]
   },
   "hooks": {

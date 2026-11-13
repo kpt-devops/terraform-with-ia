@@ -38,6 +38,7 @@ Reglas:
 | Suscripción de anomalías | `cost-explorer/anomaly-subscription` | Desde cero (`aws_ce_anomaly_subscription`) | Alerta inmediata a SNS por umbral en USD |
 | Proveedor OIDC de GitHub | `iam/github-oidc-provider` | Desde cero (`aws_iam_openid_connect_provider`) | Uno por cuenta; sin thumbprint (IAM usa su CA para GitHub) |
 | Rol para GitHub Actions | `iam/github-actions-role` | Desde cero (`aws_iam_role` + trust OIDC) | `aud` = sts, `sub` exacto sin comodines (validado), políticas administradas e inline |
+| Rol asumible por personas o agentes | `iam/assumable-role` | Desde cero (`aws_iam_role` + trust a principals IAM) | Principals explícitos sin `*` (validado), MFA opcional, políticas administradas e inline |
 
 Desde un deployment se invocan como `source = "../../modules/<servicio>/<variante>"`.
 
