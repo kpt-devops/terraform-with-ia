@@ -52,7 +52,7 @@ jobs:
       - run: |
           ./scripts/tf.sh ${{ matrix.environment }} ${{ matrix.deployment }} plan -input=false -no-color -out=tfplan
           ./scripts/tf.sh ${{ matrix.environment }} ${{ matrix.deployment }} show -json tfplan > plan.json
-      - uses: infracost/actions/setup@v3
+      - uses: infracost/actions/setup@v5
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
       - run: |
