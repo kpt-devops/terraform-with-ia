@@ -36,7 +36,7 @@ scripts/
 | `SECURITY.md` | Cómo reportar vulnerabilidades y qué nunca se versiona |
 | `.pre-commit-config.yaml` | Hooks locales: gitleaks + `tf-check.sh` antes de cada commit |
 | `.github/dependabot.yml` | Actualizaciones semanales de providers, módulos y actions |
-| `.github/workflows/terraform-pr.yml` | Checks en todo PR; `plan` + infracost por deployment y entorno solo en PRs del repo, con rol read-only (OIDC) |
+| `.github/workflows/terraform-pr.yml` | Checks en todo PR; `plan` + infracost por deployment solo en PRs del repo, con rol read-only (OIDC). Un entorno por PR según la rama base: `→ develop` planifica dev, `develop → main` planifica prod |
 
 ## Quickstart
 
