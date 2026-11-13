@@ -24,5 +24,14 @@ for DIR in "$SRC"/deployments/*/; do
   terraform -chdir="$DIR" validate -no-color 1>&2 || fail "$DIR: validate (argumento o tipo inválido)"
   tflint --chdir="$DIR" --config="$PWD/$SRC/.tflint.hcl" --call-module-type=local --format=compact 1>&2 || fail "$DIR: tflint"
 done
+# Tests nativos (terraform test) de cada módulo con carpeta tests/: offline, con mock_provider.
+for TESTS in "$SRC"/modules/*/*/tests/; do
+  [ -d "$TESTS" ] || continue
+  DIR="${TESTS%/tests/}"
+  export TF_DATA_DIR="$PWD/$DIR/.terraform/check"
+  terraform -chdir="$DIR" init -backend=false -input=false >/dev/null || fail "$DIR: init falló"
+  terraform -chdir="$DIR" test -no-color 1>&2 || fail "$DIR: terraform test falló"
+done
+unset TF_DATA_DIR
 LOG_LEVEL=ERROR checkov -d "$SRC" --framework terraform --download-external-modules true --quiet --compact 1>&2 || fail "checkov: hallazgo de seguridad"
 exit 0
