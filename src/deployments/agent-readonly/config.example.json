@@ -1,0 +1,4 @@
+{
+  "trusted_principal_arns": ["arn:aws:iam::000000000000:root"],
+  "require_mfa": false
+}

@@ -7,5 +7,18 @@ plan.json
 .terraform.lock.hcl
 crash.log
 .build/
+.external_modules/
+builds/
 **/__pycache__/
-terraform.tfvars
+
+
+# Archivos locales del editor/agente
+.claude/settings.local.json
+.remember/
+
+# Valores por entorno: nunca en el repo (público)
+scripts/env/*.env
+!scripts/env/example.env
+src/deployments/*/config.*.json
+!src/deployments/*/config.example.json
+*.tfvars
