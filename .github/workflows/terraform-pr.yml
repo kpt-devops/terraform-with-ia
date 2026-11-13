@@ -1,6 +1,8 @@
 name: terraform-pr
 on:
+  # Promoción por rama base: feature → develop planifica dev; develop → main planifica prod.
   pull_request:
+    branches: [develop, main]
     paths: ["src/**", "scripts/**", ".github/workflows/terraform-pr.yml"]
 permissions:
   id-token: write
@@ -14,6 +16,7 @@ jobs:
       contents: read
     outputs:
       deployments: ${{ steps.list.outputs.deployments }}
+      environment: ${{ steps.env.outputs.environment }}
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
@@ -22,6 +25,9 @@ jobs:
       - run: ./scripts/tf-check.sh < /dev/null
       - id: list
         run: echo "deployments=$(ls src/deployments | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+      # Un solo entorno por PR, según la rama base.
+      - id: env
+        run: echo "environment=${{ github.base_ref == 'main' && 'prod' || 'dev' }}" >> "$GITHUB_OUTPUT"
 
   # Solo PRs del propio repo: los forks no reciben secretos ni pueden asumir el rol OIDC.
   plan:
@@ -30,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        environment: [dev, prod]
+        environment: ["${{ needs.checks.outputs.environment }}"]
         deployment: ${{ fromJSON(needs.checks.outputs.deployments) }}
     runs-on: ubuntu-latest
     # Un GitHub Environment por entorno. Variables: AWS_REGION, AWS_ACCOUNT_ID, TF_STATE_BUCKET, TF_STATE_REGION. Secreto: AWS_PLAN_ROLE_ARN.
