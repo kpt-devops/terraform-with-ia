@@ -16,7 +16,7 @@ jobs:
       deployments: ${{ steps.list.outputs.deployments }}
     steps:
       - uses: actions/checkout@v7
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
       - uses: terraform-linters/setup-tflint@v4
       - run: pip install checkov
       - run: ./scripts/tf-check.sh < /dev/null
@@ -42,7 +42,7 @@ jobs:
       TF_STATE_REGION: ${{ vars.TF_STATE_REGION }}
     steps:
       - uses: actions/checkout@v7
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_wrapper: false
       - uses: aws-actions/configure-aws-credentials@v4
