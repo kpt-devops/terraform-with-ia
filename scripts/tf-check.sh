@@ -12,6 +12,12 @@ if [ ! -t 0 ]; then
 fi
 
 SRC="src"
+# Caché de providers compartida: sin ella cada init copia el provider AWS (~700 MB) en cada carpeta.
+# MAY_BREAK_DEPENDENCY_LOCK_FILE: los .terraform.lock.hcl no se versionan, así que sin esto
+# Terraform ignora la caché en el primer init.
+export TF_PLUGIN_CACHE_DIR="${TF_PLUGIN_CACHE_DIR:-$HOME/.terraform.d/plugin-cache}"
+export TF_PLUGIN_CACHE_MAY_BREAK_DEPENDENCY_LOCK_FILE=true
+mkdir -p "$TF_PLUGIN_CACHE_DIR"
 fail() { echo "[tf-check] $1" >&2; exit 2; }
 
 terraform fmt -check -recursive "$SRC" >/dev/null || fail "fmt: ejecuta terraform fmt -recursive src"
