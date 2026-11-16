@@ -29,10 +29,34 @@ jobs:
       - id: env
         run: echo "environment=${{ github.base_ref == 'main' && 'prod' || 'dev' }}" >> "$GITHUB_OUTPUT"
 
-  # Solo PRs del propio repo: los forks no reciben secretos ni pueden asumir el rol OIDC.
-  plan:
+  # ¿El GitHub Environment del PR está configurado? Sin AWS_PLAN_ROLE_ARN (p. ej. prod sin cuenta
+  # todavía) el plan se salta en vez de fallar al pedir credenciales. Las variables y secretos de un
+  # Environment solo se leen dentro de un job que lo declara, por eso este job aparte.
+  entorno:
     needs: checks
     if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions: {}
+    environment: ${{ needs.checks.outputs.environment }}
+    outputs:
+      configurado: ${{ steps.check.outputs.configurado }}
+    steps:
+      - id: check
+        env:
+          PLAN_ROLE: ${{ secrets.AWS_PLAN_ROLE_ARN }}
+          ENTORNO: ${{ needs.checks.outputs.environment }}
+        run: |
+          if [ -n "$PLAN_ROLE" ]; then
+            echo "configurado=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configurado=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Plan omitido::El Environment '$ENTORNO' no tiene AWS_PLAN_ROLE_ARN; se salta el plan."
+          fi
+
+  # Solo PRs del propio repo: los forks no reciben secretos ni pueden asumir el rol OIDC.
+  plan:
+    needs: [checks, entorno]
+    if: needs.entorno.outputs.configurado == 'true'
     strategy:
       fail-fast: false
       matrix:
