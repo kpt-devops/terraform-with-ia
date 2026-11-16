@@ -3,7 +3,8 @@
 #   scripts/tf.sh <dev|prod> <deployment> <comando> [args...]
 #   ej: scripts/tf.sh dev sqs-orders plan
 # Valores por entorno: scripts/env/<entorno>.env (no versionado; ver example.env)
-# o variables ya exportadas (CI): AWS_PROFILE, TF_VAR_region, TF_VAR_account_id.
+# o variables ya exportadas (CI): AWS_PROFILE, TF_VAR_region, TF_VAR_account_id,
+# TF_STATE_BUCKET y TF_STATE_REGION (región del bucket; por defecto TF_VAR_region).
 set -euo pipefail
 
 ENVS="dev prod"

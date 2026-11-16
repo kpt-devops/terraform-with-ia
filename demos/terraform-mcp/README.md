@@ -19,7 +19,7 @@ Para validar la demo antes de presentarla, sigue [`escenarios.md`](escenarios.md
 | --- | --- | --- |
 | 1 | Terraform ≥ 1.6, Docker, `uv`, tflint, checkov, pre-commit, Claude Code | Herramientas |
 | 2 | `pre-commit install` y `./scripts/tf-check.sh < /dev/null` | Debe terminar en 0 |
-| 3 | `cp scripts/env/example.env scripts/env/dev.env` y editarlo | Perfil, región y cuenta de dev |
+| 3 | `cp scripts/env/example.env scripts/env/dev.env` y editarlo | Perfil, región, cuenta y bucket de state de dev |
 | 4 | `cp src/deployments/sqs-orders/config.example.json src/deployments/sqs-orders/config.dev.json` y `./scripts/config-push.sh dev sqs-orders` | Config de dev en SSM |
 | 5 | `agent-readonly`: config, `config-push` y `./scripts/tf.sh dev agent-readonly apply` | Rol del agente para el AWS MCP |
 | 6 | Perfil `terraform-with-ia-agent` en `~/.aws/config` (ver README) | Credenciales del AWS MCP |
