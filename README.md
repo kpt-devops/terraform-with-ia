@@ -73,6 +73,18 @@ module "sqs" {
 [terraform-aws-modules](https://github.com/terraform-aws-modules) con versión fijada (se envuelven
 como módulo propio) → a explorar (se proponen en un PR) → desde cero con justificación.
 
+## Tests
+
+Los módulos con reglas de seguridad tienen tests nativos (`terraform test`) en
+`src/modules/<servicio>/<variante>/tests/*.tftest.hcl`. Usan `mock_provider "aws"` y
+`command = plan`: corren offline, sin credenciales AWS.
+
+```bash
+terraform -chdir=src/modules/iam/assumable-role init -backend=false
+terraform -chdir=src/modules/iam/assumable-role test
+./scripts/tf-check.sh < /dev/null   # corre los tests de todo módulo con carpeta tests/
+```
+
 ## Entornos sin duplicar código
 
 Un mismo código para todos los entornos. El entorno es el workspace de Terraform y lo elige
