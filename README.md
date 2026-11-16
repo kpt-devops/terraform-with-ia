@@ -36,7 +36,7 @@ scripts/
 | `SECURITY.md` | Cómo reportar vulnerabilidades y qué nunca se versiona |
 | `.pre-commit-config.yaml` | Hooks locales: gitleaks + `tf-check.sh` antes de cada commit |
 | `.github/dependabot.yml` | Actualizaciones semanales de providers, módulos y actions |
-| `.github/workflows/terraform-pr.yml` | Checks en todo PR; `plan` + infracost por deployment y entorno solo en PRs del repo, con rol read-only (OIDC) |
+| `.github/workflows/terraform-pr.yml` | Checks en todo PR; `plan` + infracost por deployment solo en PRs del repo, con rol read-only (OIDC). Un entorno por PR según la rama base: `→ develop` planifica dev, `develop → main` planifica prod |
 
 ## Quickstart
 
@@ -73,6 +73,18 @@ module "sqs" {
 [terraform-aws-modules](https://github.com/terraform-aws-modules) con versión fijada (se envuelven
 como módulo propio) → a explorar (se proponen en un PR) → desde cero con justificación.
 
+## Tests
+
+Los módulos con reglas de seguridad tienen tests nativos (`terraform test`) en
+`src/modules/<servicio>/<variante>/tests/*.tftest.hcl`. Usan `mock_provider "aws"` y
+`command = plan`: corren offline, sin credenciales AWS.
+
+```bash
+terraform -chdir=src/modules/iam/assumable-role init -backend=false
+terraform -chdir=src/modules/iam/assumable-role test
+./scripts/tf-check.sh < /dev/null   # corre los tests de todo módulo con carpeta tests/
+```
+
 ## Entornos sin duplicar código
 
 Un mismo código para todos los entornos. El entorno es el workspace de Terraform y lo elige
@@ -91,7 +103,7 @@ cp src/deployments/sqs-orders/config.example.json src/deployments/sqs-orders/con
 | `utils/environment` | `environment = terraform.workspace`; falla si el workspace no es `dev` o `prod`; lee la config del deployment desde SSM |
 | `module.env.config` | Valores por entorno (umbrales, reintentos, flags), leídos con `try(..., default)` |
 | `allowed_account_ids` | Impide aplicar un entorno en una cuenta AWS que no le corresponde |
-| Backend S3 | Un bucket por cuenta (`TF_STATE_BUCKET` en el `.env`; en CI, variable del GitHub Environment) y un state por deployment; con workspaces, cada entorno queda en `env:/<entorno>/...` |
+| Backend S3 | Un bucket por cuenta (`TF_STATE_BUCKET` en el `.env`; en CI, secreto del GitHub Environment para que no aparezca en los logs) y un state por deployment; con workspaces, cada entorno queda en `env:/<entorno>/...` |
 
 ## Revisar la infraestructura con el AWS MCP Server
 

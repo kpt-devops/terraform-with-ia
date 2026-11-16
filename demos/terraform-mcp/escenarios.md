@@ -3,7 +3,8 @@
 Ejecuta los escenarios en orden. Cada uno tiene un prompt (o acción), el resultado esperado, el criterio
 para darlo por aprobado y la captura que va al artículo. Anota el resultado en la tabla del final.
 
-Requisito: `orders-dev` y `agent-readonly-dev` aplicados en la cuenta.
+Requisito: `orders-dev` y `agent-readonly-dev` aplicados en la cuenta. Los comandos usan tu perfil:
+`set -a; . scripts/env/dev.env; set +a` deja `AWS_PROFILE` cargado en la terminal.
 
 ## 0. Pre-vuelo (5 min)
 
@@ -11,7 +12,7 @@ Requisito: `orders-dev` y `agent-readonly-dev` aplicados en la cuenta.
 | --- | --- | --- |
 | 0.1 | `./scripts/tf-check.sh < /dev/null; echo "exit=$?"` | `exit=0` |
 | 0.2 | `aws sts get-caller-identity --profile terraform-with-ia-agent --query Arn --output text` | `...:assumed-role/agent-readonly-dev/...` |
-| 0.3 | `aws sqs get-queue-url --queue-name orders-dev --profile repo-demos` | Devuelve la URL |
+| 0.3 | `aws sqs get-queue-url --queue-name orders-dev --profile "$AWS_PROFILE"` | Devuelve la URL |
 | 0.4 | `git checkout -b demo/ensayo-$(date +%Y%m%d)` | Rama limpia para el ensayo |
 | 0.5 | `claude` en la raíz → `/mcp` | `terraform` y `aws` en *connected* |
 
@@ -97,8 +98,8 @@ Si en el ensayo pasa a la primera, igual sirve: anota "0 iteraciones".
 
 **Acción previa (tú, fuera del agente)**
 ```bash
-URL=$(aws sqs get-queue-url --queue-name orders-dev --profile repo-demos --query QueueUrl --output text)
-aws sqs tag-queue --queue-url "$URL" --tags Owner=manual --profile repo-demos
+URL=$(aws sqs get-queue-url --queue-name orders-dev --profile "$AWS_PROFILE" --query QueueUrl --output text)
+aws sqs tag-queue --queue-url "$URL" --tags Owner=manual --profile "$AWS_PROFILE"
 ```
 
 **Prompt:** repite el de E5.
