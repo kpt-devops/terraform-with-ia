@@ -156,6 +156,7 @@ cp src/deployments/github-oidc/config.example.json src/deployments/github-oidc/c
 | Solo lectura | `ReadOnlyAccess` + `ssm:GetParameter` sobre `/terraform-with-ia/<entorno>/*` |
 | Forks sin acceso | El job `plan` no corre en PRs de forks y el `sub` de un fork no coincide |
 | Prod con aprobación | GitHub Environment `prod` con *Required reviewers* |
+| Entorno sin configurar | Si el Environment no tiene `AWS_PLAN_ROLE_ARN` (p. ej. prod sin cuenta), el job `plan` se salta con un aviso en vez de fallar |
 
 ## Guardrails
 
