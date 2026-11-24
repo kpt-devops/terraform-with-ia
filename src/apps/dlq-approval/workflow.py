@@ -17,6 +17,7 @@ import time
 import boto3
 from aws_durable_execution_sdk_python import CallbackTimeoutError, DurableContext, durable_execution
 from aws_durable_execution_sdk_python.config import Duration, WaitForCallbackConfig
+from aws_durable_execution_sdk_python.serdes import JsonSerDes
 
 import telegram
 
@@ -105,7 +106,10 @@ def handler(event, context: DurableContext):
         decision = context.wait_for_callback(
             lambda callback_id, _ctx: request_approval(info, callback_id),
             name="approval",
-            config=WaitForCallbackConfig(timeout=Duration.from_hours(APPROVAL_TIMEOUT_HOURS)),
+            # Sin serdes el SDK devuelve el resultado como texto; el webhook envía JSON.
+            config=WaitForCallbackConfig(
+                timeout=Duration.from_hours(APPROVAL_TIMEOUT_HOURS), serdes=JsonSerDes()
+            ),
         )
     except CallbackTimeoutError:
         context.step(

@@ -31,13 +31,14 @@ module "function" {
   handler       = var.handler
   runtime       = var.runtime
   source_path   = var.source_path
+  hash_extra    = var.name # varias funciones con el mismo source_path: un zip por función, sin carrera al empaquetar
   timeout       = var.timeout
   memory_size   = var.memory_size
 
   reserved_concurrent_executions = var.reserved_concurrent_executions
   environment_variables          = var.environment_variables
 
-  attach_policy_json = var.policy_json != null
+  attach_policy_json = var.attach_policy_json
   policy_json        = var.policy_json
 
   # Durable functions: se invocan con ARN calificado, así que publican versión.
@@ -58,7 +59,7 @@ module "function" {
   attach_tracing_policy = true
 
   cloudwatch_logs_retention_in_days = var.log_retention_days
-  logging_log_format                = var.log_format
+  logging_log_format                = local.durable ? "JSON" : var.log_format # AWS exige JSON en durable functions
   logging_application_log_level     = var.application_log_level
 
   # Sin Function URL salvo que el deployment la pida; AWS_IAM por defecto.

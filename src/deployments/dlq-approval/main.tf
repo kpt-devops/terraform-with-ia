@@ -107,13 +107,14 @@ data "aws_iam_policy_document" "workflow" {
 module "workflow" {
   source = "../../modules/lambda/function"
 
-  name        = local.workflow_fn
-  description = "Durable: revisa la DLQ, pide aprobación por Telegram y reprocesa si alguien aprueba"
-  source_path = "${path.module}/../../apps/dlq-approval"
-  handler     = "workflow.handler"
-  runtime     = "python3.14"
-  timeout     = 60 # por invocación; la ejecución completa la limita durable_execution_timeout
-  policy_json = data.aws_iam_policy_document.workflow.json
+  name               = local.workflow_fn
+  description        = "Durable: revisa la DLQ, pide aprobación por Telegram y reprocesa si alguien aprueba"
+  source_path        = "${path.module}/../../apps/dlq-approval"
+  handler            = "workflow.handler"
+  runtime            = "python3.14"
+  timeout            = 60 # por invocación; la ejecución completa la limita durable_execution_timeout
+  attach_policy_json = true
+  policy_json        = data.aws_iam_policy_document.workflow.json
 
   durable_execution_timeout = (local.approval_timeout_hours + 2) * 3600
   durable_retention_days    = 7
@@ -145,13 +146,14 @@ data "aws_iam_policy_document" "starter" {
 module "starter" {
   source = "../../modules/lambda/function"
 
-  name        = "${local.name}-starter"
-  description = "Inicia la ejecución durable con un nombre idempotente"
-  source_path = "${path.module}/../../apps/dlq-approval"
-  handler     = "starter.handler"
-  runtime     = "python3.14"
-  timeout     = 10
-  policy_json = data.aws_iam_policy_document.starter.json
+  name               = "${local.name}-starter"
+  description        = "Inicia la ejecución durable con un nombre idempotente"
+  source_path        = "${path.module}/../../apps/dlq-approval"
+  handler            = "starter.handler"
+  runtime            = "python3.14"
+  timeout            = 10
+  attach_policy_json = true
+  policy_json        = data.aws_iam_policy_document.starter.json
 
   environment_variables = {
     DURABLE_FUNCTION_ARN = module.workflow.alias_arn
@@ -193,13 +195,14 @@ data "aws_iam_policy_document" "webhook" {
 module "webhook" {
   source = "../../modules/lambda/function"
 
-  name        = "${local.name}-webhook"
-  description = "Recibe el clic de Telegram y completa el callback de la ejecución durable"
-  source_path = "${path.module}/../../apps/dlq-approval"
-  handler     = "webhook.handler"
-  runtime     = "python3.14"
-  timeout     = 15
-  policy_json = data.aws_iam_policy_document.webhook.json
+  name               = "${local.name}-webhook"
+  description        = "Recibe el clic de Telegram y completa el callback de la ejecución durable"
+  source_path        = "${path.module}/../../apps/dlq-approval"
+  handler            = "webhook.handler"
+  runtime            = "python3.14"
+  timeout            = 15
+  attach_policy_json = true
+  policy_json        = data.aws_iam_policy_document.webhook.json
 
   function_url_auth_type = "NONE"
 

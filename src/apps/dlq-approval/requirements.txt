@@ -1,0 +1,4 @@
+# Versión fija del SDK de durable functions: la que trae el runtime de Lambda es anterior a 2.0
+# y no tiene CallbackTimeoutError. El módulo de Lambda instala este archivo al empaquetar
+# (necesita python3.14 en el PATH).
+aws-durable-execution-sdk-python==3.0.2

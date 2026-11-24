@@ -34,12 +34,13 @@ data "aws_iam_policy_document" "consumer" {
 module "consumer" {
   source = "../../modules/lambda/function"
 
-  name        = "${local.name}-consumer"
-  description = "Procesa pedidos de la cola; reporta fallos por mensaje"
-  source_path = "${path.module}/../../apps/orders-consumer"
-  runtime     = "python3.13"
-  timeout     = 10 # menor que el visibility timeout de la cola
-  policy_json = data.aws_iam_policy_document.consumer.json
+  name               = "${local.name}-consumer"
+  description        = "Procesa pedidos de la cola; reporta fallos por mensaje"
+  source_path        = "${path.module}/../../apps/orders-consumer"
+  runtime            = "python3.13"
+  timeout            = 10 # menor que el visibility timeout de la cola
+  attach_policy_json = true
+  policy_json        = data.aws_iam_policy_document.consumer.json
 
   log_format            = "JSON"
   application_log_level = try(module.env.config.consumer_log_level, "ERROR")

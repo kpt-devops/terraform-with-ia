@@ -78,13 +78,26 @@ cp src/deployments/dlq-approval/config.example.json src/deployments/dlq-approval
 
 ### 5. Registrar el webhook en Telegram
 
+Exporta el perfil antes: `tf.sh` lo carga por dentro, pero los `aws ssm` sueltos no. Si una lectura
+falla, `secret_token` se envía vacío y el webhook rechaza los clics sin dejar rastro claro.
+
 ```bash
+export AWS_PROFILE=<perfil de scripts/env/dev.env> AWS_REGION=us-east-1
+TOKEN=$(aws ssm get-parameter --with-decryption --name /dlq-approval/telegram-bot-token \
+  --query Parameter.Value --output text)
+SECRET=$(aws ssm get-parameter --with-decryption --name /dlq-approval/telegram-webhook-secret \
+  --query Parameter.Value --output text)
 URL=$(./scripts/tf.sh dev dlq-approval output -raw webhook_url)
-SECRET=$(aws ssm get-parameter --region us-east-1 --with-decryption \
-  --name /dlq-approval/telegram-webhook-secret --query Parameter.Value --output text)
-curl -s "https://api.telegram.org/bot<TOKEN>/setWebhook" \
+echo "token:${#TOKEN} secret:${#SECRET} url:$URL"   # longitudes, nunca los valores
+
+curl -s "https://api.telegram.org/bot$TOKEN/setWebhook" \
   -d "url=$URL" -d "secret_token=$SECRET" -d 'allowed_updates=["callback_query"]'
+curl -s "https://api.telegram.org/bot$TOKEN/getWebhookInfo"   # url correcta y sin last_error_message
 ```
+
+Repite este paso **cada vez que el webhook se vuelva a crear** (por ejemplo, tras un destroy y apply):
+la Function URL cambia y Telegram seguiría llamando a la anterior, así que el clic en
+**Reprocesar** no llega a ningún lado.
 
 ## Probar (guion de la demo)
 
@@ -106,7 +119,8 @@ curl -s "https://api.telegram.org/bot<TOKEN>/setWebhook" \
    de SQS pueden tardar unos minutos) y llega el mensaje a Telegram con **Reprocesar** / **Esperar**.
 4. **Ver la pausa.** Consola de Lambda → `dlq-approval-dev-workflow` → **Durable executions**: la
    ejecución está en espera y no cobra cómputo.
-5. **Corregir.** `"consumer_simulate_bug": false`, `config-push` y `apply`.
+5. **Corregir.** `"consumer_simulate_bug": false`, `config-push` y `apply`. Espera a que el apply
+   termine **antes** del clic: si no, los mensajes devueltos vuelven a fallar y regresan a la DLQ.
 6. **Clic en Reprocesar.** El webhook completa el callback, la función reanuda, hace el redrive y
    avisa cuántos mensajes movió. Los 5 pedidos se procesan bien.
 
@@ -119,6 +133,18 @@ los mensajes vuelven a fallar y regresan a la DLQ.
 ./demos/dlq-approval/scripts/send-orders.sh dev 5 sin-monto
 ```
 
+## Apagar la demo
+
+Primero `dlq-approval`, porque su alarma apunta a la DLQ de `sqs-orders`:
+
+```bash
+curl -s "https://api.telegram.org/bot$TOKEN/deleteWebhook"
+./scripts/tf.sh dev dlq-approval destroy
+./scripts/tf.sh dev sqs-orders destroy
+```
+
+Los parámetros de SSM (secretos y config) quedan; para volver a levantarla basta el paso 4 y el 5.
+
 ## Notas de diseño
 
 | Decisión | Por qué |
@@ -127,4 +153,4 @@ los mensajes vuelven a fallar y regresan a la DLQ.
 | La durable se invoca por el alias `live` | Cada ejecución queda atada a su versión aunque se publique código nuevo mientras espera |
 | Referencia corta del botón en DynamoDB (TTL) | `callback_data` de Telegram admite 64 bytes y un callback id llega a 1024 |
 | `DeleteItem` al usar la referencia | Un segundo clic no hace nada |
-| SDK de durable incluido en el runtime | Suficiente para la demo; en producción conviene empaquetarlo (`aws-durable-execution-sdk-python`) para fijar la versión |
+| SDK de durable empaquetado (`src/apps/dlq-approval/requirements.txt`) | El del runtime es anterior a 2.0 y no tiene la API que usa el workflow; empaquetar requiere `python3.14` en el PATH |

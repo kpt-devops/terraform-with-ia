@@ -51,9 +51,15 @@ variable "environment_variables" {
 }
 
 variable "policy_json" {
-  description = "Política IAM adicional (JSON) para el rol de la función. Null = solo logs y X-Ray."
+  description = "Política IAM adicional (JSON) para el rol de la función. Requiere attach_policy_json = true."
   type        = string
   default     = null
+}
+
+variable "attach_policy_json" {
+  description = "Adjunta policy_json al rol. Va aparte porque el JSON suele depender de ARNs que no se conocen hasta el apply y count no admite valores desconocidos."
+  type        = bool
+  default     = false
 }
 
 variable "allowed_triggers" {
@@ -61,7 +67,7 @@ variable "allowed_triggers" {
   type = map(object({
     principal                = string
     source_arn               = optional(string)
-    action                   = optional(string)
+    action                   = optional(string, "lambda:InvokeFunction") # el módulo usa try(), que no reemplaza null
     function_url_auth_type   = optional(string)
     invoked_via_function_url = optional(bool)
   }))
@@ -80,7 +86,7 @@ variable "tags" {
 }
 
 variable "log_format" {
-  description = "Formato de logs: Text o JSON. JSON permite filtrar por campos en Logs Insights."
+  description = "Formato de logs: Text o JSON. JSON permite filtrar por campos en Logs Insights. Una función durable siempre usa JSON."
   type        = string
   default     = "Text"
 
