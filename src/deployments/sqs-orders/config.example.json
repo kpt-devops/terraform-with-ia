@@ -1,4 +1,7 @@
 {
   "visibility_timeout_seconds": 30,
-  "max_receive_count": 5
+  "max_receive_count": 5,
+  "consumer_enabled": true,
+  "consumer_simulate_bug": false,
+  "consumer_log_level": "ERROR"
 }

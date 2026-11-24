@@ -89,6 +89,7 @@ module "lambda" {
   source_path                    = "${path.module}/../../apps/cost-explainer"
   timeout                        = 60
   reserved_concurrent_executions = 2 # CloudTrail LookupEvents admite 2 TPS por cuenta y región
+  attach_policy_json             = true
   policy_json                    = data.aws_iam_policy_document.lambda.json
 
   environment_variables = {

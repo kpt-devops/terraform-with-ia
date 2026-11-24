@@ -51,16 +51,25 @@ variable "environment_variables" {
 }
 
 variable "policy_json" {
-  description = "Política IAM adicional (JSON) para el rol de la función. Null = solo logs y X-Ray."
+  description = "Política IAM adicional (JSON) para el rol de la función. Requiere attach_policy_json = true."
   type        = string
   default     = null
 }
 
+variable "attach_policy_json" {
+  description = "Adjunta policy_json al rol. Va aparte porque el JSON suele depender de ARNs que no se conocen hasta el apply y count no admite valores desconocidos."
+  type        = bool
+  default     = false
+}
+
 variable "allowed_triggers" {
-  description = "Quién puede invocar la función: { clave = { principal = \"sns.amazonaws.com\", source_arn = \"<arn>\" } }."
+  description = "Quién puede invocar la función: { clave = { principal = \"sns.amazonaws.com\", source_arn = \"<arn>\" } }. Para una Function URL pública se usan action, function_url_auth_type e invoked_via_function_url."
   type = map(object({
-    principal  = string
-    source_arn = string
+    principal                = string
+    source_arn               = optional(string)
+    action                   = optional(string, "lambda:InvokeFunction") # el módulo usa try(), que no reemplaza null
+    function_url_auth_type   = optional(string)
+    invoked_via_function_url = optional(bool)
   }))
   default = {}
 }
@@ -74,4 +83,62 @@ variable "log_retention_days" {
 variable "tags" {
   description = "Tags obligatorios: Project, Environment, Owner, CostCenter."
   type        = map(string)
+}
+
+variable "log_format" {
+  description = "Formato de logs: Text o JSON. JSON permite filtrar por campos en Logs Insights. Una función durable siempre usa JSON."
+  type        = string
+  default     = "Text"
+
+  validation {
+    condition     = contains(["Text", "JSON"], var.log_format)
+    error_message = "log_format debe ser Text o JSON."
+  }
+}
+
+variable "application_log_level" {
+  description = "Nivel de logs de la aplicación (solo con log_format = JSON): TRACE, DEBUG, INFO, WARN, ERROR o FATAL."
+  type        = string
+  default     = "INFO"
+}
+
+variable "durable_execution_timeout" {
+  description = "Activa Lambda durable functions: duración máxima de una ejecución en segundos (1 a 31622400). Null = función normal. Solo se puede activar al crear la función."
+  type        = number
+  default     = null
+}
+
+variable "durable_retention_days" {
+  description = "Días que se conserva el estado de una ejecución durable terminada (1 a 90)."
+  type        = number
+  default     = 7
+}
+
+variable "publish" {
+  description = "Publica una versión en cada cambio. Siempre true si la función es durable."
+  type        = bool
+  default     = false
+}
+
+variable "alias_name" {
+  description = "Crea un alias que apunta a la última versión publicada. Requiere publish o durable."
+  type        = string
+  default     = null
+}
+
+variable "function_url_auth_type" {
+  description = "Crea una Function URL: AWS_IAM o NONE (pública; la app debe validar su propio secreto). Null = sin URL."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.function_url_auth_type == null || contains(["AWS_IAM", "NONE"], coalesce(var.function_url_auth_type, "AWS_IAM"))
+    error_message = "function_url_auth_type debe ser AWS_IAM, NONE o null."
+  }
+}
+
+variable "event_source_mapping" {
+  description = "Event source mappings (por ejemplo, una cola SQS): mismo formato que terraform-aws-modules/lambda."
+  type        = any
+  default     = {}
 }

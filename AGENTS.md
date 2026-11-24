@@ -27,6 +27,9 @@ Cuatro carpetas en src/, cada una con un solo trabajo:
   una copia. Si son varias iguales en un deployment, `for_each` sobre un mapa.
 - Deployment nuevo = carpeta nueva en src/deployments/ con versions.tf, provider.tf, main.tf,
   outputs.tf y config.example.json (copia la forma de src/deployments/sqs-orders/).
+- Si un deployment lee con data sources recursos de otro, lista ese otro en un archivo
+  `depends-on` de su carpeta (ver src/deployments/dlq-approval/): en CI el plan se omite con aviso
+  mientras la dependencia no esté desplegada.
 - Si cambias la dirección de un recurso existente (renombre, for_each), agrega un bloque `moved`.
 
 ## Fuente de verdad
