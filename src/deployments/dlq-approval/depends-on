@@ -1,0 +1,3 @@
+# Deployments de los que este lee recursos (data sources). En CI, si alguno no está desplegado
+# en el entorno, el plan se omite con aviso en vez de fallar. Uno por línea.
+sqs-orders  # cola orders-<entorno> y su DLQ

@@ -44,9 +44,32 @@ terraform init -input=false -reconfigure \
   ${TF_INIT_ARGS:-} >/dev/null
 # En CI el rol de plan es de solo lectura: no puede crear el state de un workspace nuevo. Si el
 # deployment aún no está desplegado en este entorno, se omite con un aviso (el primer apply es manual).
-if [ -n "${GITHUB_ACTIONS:-}" ] && ! terraform workspace list | sed 's/^[* ]*//' | grep -qx "$ENV"; then
-  echo "::notice title=$PROJECT::no está desplegado en $ENV (no hay workspace); se omite '$CMD'." >&2
-  exit 0
+if [ -n "${GITHUB_ACTIONS:-}" ]; then
+  skip() { echo "::notice title=$PROJECT::$1; se omite '$CMD'." >&2; exit 0; }
+
+  terraform workspace list | sed 's/^[* ]*//' | grep -qx "$ENV" \
+    || skip "no está desplegado en $ENV (no hay workspace)"
+
+  # Sin config en SSM, utils/environment falla al leerla: el deployment no está configurado aquí.
+  PARAM="/terraform-with-ia/$ENV/$PROJECT"
+  if ! out=$(aws ssm get-parameter --name "$PARAM" --query Parameter.Name --output text 2>&1); then
+    [[ "$out" == *ParameterNotFound* ]] || { echo "$out" >&2; exit 1; }
+    skip "no está configurado en $ENV (falta $PARAM en SSM)"
+  fi
+
+  # Deployments de los que este lee recursos con data sources (archivo depends-on, uno por línea).
+  # Si alguno no tiene recursos en su state de este entorno (p. ej. una demo apagada), el plan
+  # fallaría al buscarlos; se omite con aviso.
+  if [ -f "$DIR/depends-on" ]; then
+    while read -r dep; do
+      dep="${dep%%#*}"; dep="${dep//[[:space:]]/}"
+      [ -n "$dep" ] || continue
+      key="env:/$ENV/deployments/$dep/terraform.tfstate"
+      n=$(aws s3 cp "s3://$TF_STATE_BUCKET/$key" - --region "${TF_STATE_REGION:-$TF_VAR_region}" 2>/dev/null \
+            | jq '[.resources[]? | select(.mode == "managed")] | length' 2>/dev/null || true)
+      [ "${n:-0}" -gt 0 ] || skip "depende de '$dep', que no está desplegado en $ENV"
+    done < "$DIR/depends-on"
+  fi
 fi
 terraform workspace select -or-create "$ENV" >/dev/null
 echo "[tf] deployment=$PROJECT entorno=$ENV workspace=$(terraform workspace show) perfil=${AWS_PROFILE:-<default>}" >&2
