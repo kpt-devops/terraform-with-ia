@@ -1,0 +1,6 @@
+{
+  "telegram_chat_id": "<id del chat que aprueba>",
+  "telegram_token_param": "/dlq-approval/telegram-bot-token",
+  "webhook_secret_param": "/dlq-approval/telegram-webhook-secret",
+  "approval_timeout_hours": 24
+}
