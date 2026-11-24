@@ -33,7 +33,10 @@ Reglas:
 | --- | --- | --- | --- |
 | Cola SQS con DLQ | `sqs/queue-and-dead-letter` | Wrapper de `terraform-aws-modules/sqs/aws` `~> 5.2` | DLQ `<name>-dlq`, cifrado SSE, retención de la DLQ de 14 días |
 | Topic SNS | `sns/topic` | Wrapper de `terraform-aws-modules/sns/aws` `~> 7.2` | Solo los servicios listados pueden publicar |
-| Función Lambda | `lambda/function` | Wrapper de `terraform-aws-modules/lambda/aws` `~> 8.12` | X-Ray activo, retención de logs, código desde `src/apps/` |
+| Función Lambda | `lambda/function` | Wrapper de `terraform-aws-modules/lambda/aws` `~> 8.12` | X-Ray activo, retención de logs, código desde `src/apps/`; opcional: durable functions (con versión y alias), Function URL, event source mapping, logs JSON |
+| Tabla DynamoDB | `dynamodb/table` | Wrapper de `terraform-aws-modules/dynamodb-table/aws` `~> 5.5` | `PAY_PER_REQUEST`, PITR activo, cifrado SSE, TTL opcional |
+| Alarma de CloudWatch | `cloudwatch/metric-alarm` | Wrapper de `terraform-aws-modules/cloudwatch/aws//modules/metric-alarm` `~> 5.7` | Una métrica, acciones opcionales (el cambio de estado llega a EventBridge) |
+| Regla de EventBridge a Lambda | `eventbridge/rule-to-lambda` | Desde cero (`aws_cloudwatch_event_rule` + target) | Bus default, política de reintentos explícita |
 | Monitor de anomalías de costo | `cost-explorer/anomaly-monitor` | Desde cero (`aws_ce_anomaly_monitor`) | Monitor dimensional por servicio |
 | Suscripción de anomalías | `cost-explorer/anomaly-subscription` | Desde cero (`aws_ce_anomaly_subscription`) | Alerta inmediata a SNS por umbral en USD |
 | Proveedor OIDC de GitHub | `iam/github-oidc-provider` | Desde cero (`aws_iam_openid_connect_provider`) | Uno por cuenta; sin thumbprint (IAM usa su CA para GitHub) |
@@ -59,17 +62,17 @@ Terraform Registry el 2026-11-10.
 | Cola SQS | `terraform-aws-modules/sqs/aws` | `~> 5.2` | Solo vía `sqs/queue-and-dead-letter` |
 | Bucket S3 | `terraform-aws-modules/s3-bucket/aws` | `~> 5.17` | Bloqueo de acceso público, cifrado, versionado en prod |
 | Función Lambda | `terraform-aws-modules/lambda/aws` | `~> 8.12` | Solo vía `lambda/function` |
-| Tabla DynamoDB | `terraform-aws-modules/dynamodb-table/aws` | `~> 5.5` | `PAY_PER_REQUEST`, PITR activo |
+| Tabla DynamoDB | `terraform-aws-modules/dynamodb-table/aws` | `~> 5.5` | Solo vía `dynamodb/table` |
 | Topic SNS | `terraform-aws-modules/sns/aws` | `~> 7.2` | Solo vía `sns/topic`; KMS salvo que el publicador no lo soporte |
 | Clave KMS | `terraform-aws-modules/kms/aws` | `~> 4.2` | Rotación activa |
 | Parámetro SSM | `terraform-aws-modules/ssm-parameter/aws` | `~> 2.1` | `SecureString` para secretos |
-| Alarmas y log groups | `terraform-aws-modules/cloudwatch/aws` | `~> 5.7` | Retención explícita |
+| Alarmas y log groups | `terraform-aws-modules/cloudwatch/aws` | `~> 5.7` | Alarmas vía `cloudwatch/metric-alarm`; retención explícita |
 
 ## Módulos a explorar
 
 | Necesidad | `source` | Última versión | Motivo para evaluarlo |
 | --- | --- | --- | --- |
-| Reglas y schedules de EventBridge | `terraform-aws-modules/eventbridge/aws` | 4.3.3 | Automatizaciones FinOps programadas |
+| Reglas y schedules de EventBridge | `terraform-aws-modules/eventbridge/aws` | 4.3.3 | Buses, pipes y schedules; una regla simple ya existe como `eventbridge/rule-to-lambda` |
 | Roles y políticas IAM | `terraform-aws-modules/iam/aws` | 6.8.2 | Roles IAM más complejos; el rol OIDC de CI ya existe como módulo propio |
 | Step Functions | `terraform-aws-modules/step-functions/aws` | 5.1.1 | Flujos de remediación con aprobación |
 | App Runner | `terraform-aws-modules/app-runner/aws` | 1.2.3 | Servicios web simples |

@@ -9,3 +9,7 @@ output "queue_url" {
 output "dlq_arn" {
   value = module.sqs.dlq_arn
 }
+
+output "consumer_function_name" {
+  value = module.consumer.function_name
+}
