@@ -3,7 +3,7 @@
 module "alarm" {
   # checkov:skip=CKV_TF_1: módulo del Terraform Registry fijado por versión según src/modules/catalog.md.
   source  = "terraform-aws-modules/cloudwatch/aws//modules/metric-alarm"
-  version = "~> 5.7"
+  version = "~> 6.0"
 
   alarm_name          = var.name
   alarm_description   = var.description
